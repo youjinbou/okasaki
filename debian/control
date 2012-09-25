@@ -1,0 +1,26 @@
+Source: okasaki
+Priority: extra
+Maintainer: Didier Cassirame <dc@localhost>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.7.3
+
+Package: libokasaki-ocaml
+Section: libs
+Architecture: any
+Provides: ${ocaml:Provides}
+Depends: ${ocaml:Depends}
+Tag: devel::lang:ocaml, devel::library, implemented-in::ocaml, role::shared-lib
+Description: Functional data structures for ocaml
+  This library provides many functional structures as described 
+  by Chris Okasaki in his 1996 white paper.
+ 
+Package: libokasaki-ocaml-dev
+Section: libdevel
+Architecture: all
+Provides: ${ocaml:Provides}
+Depends: ${ocaml:Depends}
+Tag: devel::lang:ocaml, devel::library, implemented-in::ocaml, role::devel-lib
+Description: Functional data structures for ocaml, development files.
+  This library provides many functional structures as described 
+  by Chris Okasaki in his 1996 white paper.
+  This package contains the development files.
