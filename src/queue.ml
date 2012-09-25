@@ -5,8 +5,6 @@ struct
 
   type 'a t = {f : 'a list; r : 'a list}
 
-  exception Empty
-
   let empty = { f = []; r = [] }
 
   let is_empty q = q.f = []
@@ -18,13 +16,12 @@ struct
   let snoc q x = queue {f = q.f ; r = x::q.r }
 
   let head = function 
-    | { f = []; r = _ }    -> raise Empty
+    | { f = []; r = _ }    -> raise Not_found
     | { f = x::f'; r = _ } -> x
 
   let tail = function 
-    | { f = []; r = _ }         -> raise Empty
+    | { f = []; r = _ }         -> raise Not_found
     | { f = x::f'; r = _ } as q -> { q with f = f' }
-
 
 end
 
@@ -36,8 +33,6 @@ struct
   type 'a t = { f: 'a stream; lenf : int; r : 'a stream; lenr : int }
       (* Invariants: |F| >= |R|, LenF = |F|, LenR = |R| *)
       
-  exception Empty
-
   let empty = { f = lazy Nil; lenf = 0; r = lazy Nil; lenr = 0}
 
   let is_empty q = q.lenf = 0
@@ -48,11 +43,11 @@ struct
   let snoc q x = queue {f = q.f; lenf = q.lenf; r = lazy (Cons (x,q.r)); lenr = succ q.lenr}
 
   let head q = match q.f with 
-    | lazy Nil          -> raise Empty
+    | lazy Nil          -> raise Not_found
     | lazy (Cons (x,f)) -> x
    
   let tail q = match q.f with 
-    | lazy Nil          -> raise Empty
+    | lazy Nil          -> raise Not_found
     | lazy (Cons (x,f)) -> queue {q with lenf = pred q.lenf}
 
 end
@@ -63,8 +58,6 @@ struct
   type 'a t = { w : 'a list; f : 'a list Lazy.t; lenf : int; r : 'a list; lenr : int }
       (* Invariant : w is a prefix of force f, w = [] if f = lazy [] *)
       (*              |F| >= |R|, LenF = |F|, LenR = |R|             *)
-
-  exception Empty
 
   let empty = {w = []; f = lazy [];lenf = 0; r = []; lenr = 0}
 
@@ -84,11 +77,11 @@ struct
   let snoc q x = queue { q with r = x::q.r; lenr = succ q.lenr }
 
   let head q = match q.w with
-      []   -> raise Empty
+      []   -> raise Not_found
     | x::_ -> x
 
   let tail q = match q.w with
-      []   -> raise Empty
+      []   -> raise Not_found
     | x::w -> queue { q with w = w; f = lazy (List.tl (Lazy.force q.f)); lenf = pred q.lenf}
 
 end
@@ -100,8 +93,6 @@ struct
 
   type 'a t = { f : 'a stream; r : 'a list; s : 'a stream }
       (* invariant : |s| = |f| - |r| *)
-
-  exception Empty
 
   let empty = {f = lazy Nil; r = []; s = lazy Nil}
 
@@ -122,12 +113,56 @@ struct
 
   let snoc q x = queue { q with r = x::q.r }
   let head q = match q.f with 
-      lazy Nil          -> raise Empty
+      lazy Nil          -> raise Not_found
     | lazy (Cons (x,_)) -> x
 
   let tail q = match q.f with
-      lazy Nil           -> raise Empty
+      lazy Nil           -> raise Not_found
     | lazy (Cons (x,f')) -> {q with f = f'}
 
 end
 
+module Bootstrapped : QUEUE = 
+struct
+  (* assumes polymorphic recursion!
+     only available from version 3.12 of OCaml
+  *)
+  
+  type 'a t = 
+    | Empty
+    | Queue of 'a q
+  and 'a q = { f : 'a list; m : 'a list Lazy.t t; lenfm : int; r : 'a list; lenr : int }
+
+  let empty = Empty
+
+  let is_empty = function
+    | Empty -> true
+    | _     -> false
+
+  let rec queue : 'a. 'a q -> 'a t = fun q ->
+    if q.lenr <= q.lenfm 
+    then check_f q
+    else check_f { f = q.f; m = snoc q.m (lazy (List.rev q.r)); lenfm = q.lenfm + q.lenr; r = []; lenr = 0 }
+
+  and check_f : 'a. 'a q -> 'a t = function
+    | { f = []; m = Empty } -> Empty
+    | { f = [] } as q       -> Queue { q with f = Lazy.force (head q.m); m = tail q.m }
+    |  q                    -> Queue q
+      
+  and snoc : 'a. 'a t -> 'a -> 'a t = fun q x ->  
+    match q with
+    | Empty     -> Queue { f = [x]; m = Empty; lenfm = 1; r = []; lenr = 0 }
+    | Queue q   ->
+      queue { f = q.f; m = q.m; lenfm = q.lenfm; r = x::q.r; lenr = succ q.lenr }
+      
+  and head : 'a. 'a t -> 'a = function
+    | Empty                -> raise Not_found
+    | Queue { f = x::f' }  -> x
+    | _                    -> assert false
+
+  and tail : 'a. 'a t -> 'a t = function
+    | Empty                     -> raise Not_found
+    | Queue ({ f = x::f } as q) -> queue q 
+    | _                         -> assert false
+
+end

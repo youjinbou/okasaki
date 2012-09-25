@@ -1,0 +1,5 @@
+version = "current"
+description = "okasaki's lazy data structures"
+archive(byte) = "okasaki.cma"
+archive(native) = "okasaki.cmxa"
+directory = "+okasaki"

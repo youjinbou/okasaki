@@ -10,8 +10,6 @@ struct
   type 'a t = { f : 'a stream; lenf : int; r : 'a stream; lenr : int }
   (* Invariants: |F| <= c|R| + 1, |R| <= c|F| + 1, lenf = |F|, lenr = |R| *)
 
-  exception Empty
-
   let empty =  { f = lazy Nil; lenf = 0; r = lazy Nil; lenr = 0 }
 
   let isEmpty q = q.lenr + q.lenf = 0
@@ -37,26 +35,26 @@ struct
     queue { q with f = lazy (Cons (x ,q.f)); lenf = succ q.lenf }
 
   let head = function 
-    | { f = lazy Nil; r = lazy Nil }          -> raise Empty (* empty *)
-    | { f = lazy Nil; r = lazy (Cons (x,_)) } -> x           (* one element *)
+    | { f = lazy Nil; r = lazy Nil }          -> raise Not_found (* empty *)
+    | { f = lazy Nil; r = lazy (Cons (x,_)) } -> x               (* one element *)
     | { f = lazy (Cons (x, f)) }              -> x
 
   let tail = function
-    | { f = lazy Nil; r = lazy Nil }           -> raise Empty
+    | { f = lazy Nil; r = lazy Nil }           -> raise Not_found
     | { f = lazy Nil; r = lazy (Cons (x,_)) }  -> empty
-    | { f = lazy (Cons (x,f')) } as q           -> 
+    | { f = lazy (Cons (x,f')) } as q          -> 
       queue { q with f = f'; lenf = pred q.lenf }
 
   let snoc q x =
     queue { q with r = lazy (Cons (x ,q.r)); lenr = succ q.lenr }
 
   let last = function 
-    | { f = lazy Nil; r = lazy Nil }          -> raise Empty (* empty *)
+    | { f = lazy Nil; r = lazy Nil }          -> raise Not_found (* empty *)
     | { f = lazy (Cons (x,_)); r = lazy Nil } -> x           (* one element *)
     | { r = lazy (Cons (x, f)) }              -> x
 
   let init = function
-    | { f = lazy Nil; r = lazy Nil }          -> raise Empty
+    | { f = lazy Nil; r = lazy Nil }          -> raise Not_found
     | { f = lazy (Cons (x,_)); r = lazy Nil } -> empty
     | { r = lazy (Cons (x,r')) } as q         -> 
       queue { q with r = r'; lenr = pred q.lenr }
@@ -75,8 +73,6 @@ struct
                 r : 'a stream; lenr : int; sr : 'a stream }
 
    (* Invariants: |F| c |R| + 1, |R| c |F| + 1, lenf = |F|, lenr = |R| *)
-
-   exception Empty
 
    let empty = { f = lazy Nil; lenf = 0; sf = lazy Nil; 
 		 r = lazy Nil; lenr = 0; sr = lazy Nil }
@@ -123,12 +119,12 @@ struct
              r = q.r; lenr = q.lenr; sr = exec1 q.sr}
 
    let head = function 
-     | { f = lazy Nil; r = lazy Nil }            -> raise Empty
+     | { f = lazy Nil; r = lazy Nil }            -> raise Not_found
      | { f = lazy Nil; r = lazy (Cons (x ,_)) }  -> x
      | { f = lazy (Cons (x ,_)) }                -> x
 
    let tail = function 
-     | { f = lazy Nil; r = lazy Nil }            -> raise Empty
+     | { f = lazy Nil; r = lazy Nil }            -> raise Not_found
      | { f = lazy Nil; r = lazy (Cons (x, _)) }  -> empty
      | { f = lazy (Cons (x, f')) } as q          ->
      queue { q with f = f'; lenf = pred q.lenf; sf = exec2 q.sf; sr = exec2 q.sr }
@@ -139,12 +135,12 @@ struct
 	      r = lazy (Cons (x , q.r)); lenr = succ q.lenr; sr = exec1 q.sr }
              
    let last = function 
-     | { f = lazy Nil; r = lazy Nil }            -> raise Empty
+     | { f = lazy Nil; r = lazy Nil }            -> raise Not_found
      | { f = lazy (Cons (x ,_)); r = lazy Nil }  -> x
      | { r = lazy (Cons (x ,_)) }                -> x
 
    let init = function 
-     | { f = lazy Nil; r = lazy Nil }            -> raise Empty
+     | { f = lazy Nil; r = lazy Nil }            -> raise Not_found
      | { f = lazy (Cons (x, _)); r = lazy Nil }  -> empty
      | { r = lazy (Cons (x, r')) } as q          ->
      queue { q with r = r'; lenr = pred q.lenr; sf = exec2 q.sr; sr = exec2 q.sr }
